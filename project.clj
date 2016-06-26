@@ -10,7 +10,9 @@
                  [org.clojure/clojurescript "1.8.51"]
                  [org.clojure/core.async "0.2.374"
                   :exclusions [org.clojure/tools.reader]]
-                 [kovasb/gamma "0.0-135"]]
+                 ;;[kovasb/gamma "0.0-135"]
+                 [rogerallen/gamma "0.0-135-14-g07b9"]
+                 ]
 
   :plugins [[lein-figwheel "0.5.4-3"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]]
