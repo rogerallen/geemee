@@ -1,10 +1,14 @@
 (ns geemee.core
   (:require [gamma.api :as g]
-            [gamma.program :refer [program]]
+            [gamma.program :as p]
             [goog.dom :as gdom]
-            [goog.webgl :as wgl]))
+            [goog.webgl :as wgl]
+            [geemee.gee :as gee]
+            ))
 
 (enable-console-print!)
+
+;;(print "gee?" gee/MAX-GOOD-CODE-ATTEMPTS (gee/random-code 2))
 
 ;; ======================================================================
 ;; starting fragment shader
@@ -35,14 +39,14 @@
 
 ;; ======================================================================
 (defn init []
-  (let [rgb-fn start-rgb-fn]
+  (let [rgb-fn start-rgb-fn] ;; FIXME (gee/random-code 3)]
     (swap! app-state assoc
            :status-text "ok"
            :width 720 :height 720
            :rgb-fn rgb-fn)))
 
 (defn render [gl fragment-shader]
-  (let [prog (program {:vertex-shader vertex-shader
+  (let [prog (p/program {:vertex-shader vertex-shader
                        :fragment-shader fragment-shader
                        :precision {:float :highp}
                        })
