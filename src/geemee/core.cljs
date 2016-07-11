@@ -1,14 +1,16 @@
 (ns geemee.core
-  (:require [gamma.api :as g]
+  (:require [gamma.api     :as g]
             [gamma.program :as p]
-            [goog.dom :as gdom]
-            [goog.webgl :as wgl]
-            [geemee.gee :as gee]
-            ))
+            [goog.dom      :as dom]
+            [goog.webgl    :as wgl]
+            [geemee.gee    :as gee]
+            [cljs.js       :as cljs])
+  (:require-macros [geemee.macros :as macro]))
 
 (enable-console-print!)
 
-;;(print "gee?" gee/MAX-GOOD-CODE-ATTEMPTS (gee/random-code 2))
+;;(print "gee?" gee/MAX-GOOD-CODE-ATTEMPTS)
+;;(print "gee" (gee/random-code 10))
 
 ;; ======================================================================
 ;; starting fragment shader
@@ -18,7 +20,6 @@
     (g/vec3 (g/sin (g/* 19 r))
             (g/cos (g/* 13 r))
             (g/sin (g/*  7 r)))))
-
 ;; ======================================================================
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:status-text "Hello world!"
@@ -38,8 +39,83 @@
     (g/vec4 (rgbf pos) 1))) ;; must have alpha=1 or you won't see it
 
 ;; ======================================================================
+;; another wholesale ripoff of klangmeister
+;; https://github.com/ctford/klangmeister/blob/master/src/klangmeister/compile/eval.cljs
+
+(def namespace-declaration
+  (macro/literally
+    (ns geemee.live
+      (:require gamma.api)
+      )))
+
+(def dependencies-cljs
+  "A bundle of dependencies."
+  (macro/sources-cljs
+   gamma.api
+   gamma.ast
+   ))
+
+(def dependencies-clj
+  "A bundle of dependencies."
+  (macro/sources-clj
+   gamma.api
+   ))
+
+;;(spit "foo_dependencies.txt" dependencies)
+
+(defn loader
+  "A namespace loader that looks in the dependencies bundle for required namespaces."
+  [{:keys [name macros path]} callback]
+  (let [_ (js/console.log (str "loader: " name " : " macros " : " path))
+        str-name (.-str name)
+        source (if macros
+                 (dependencies-clj str-name)
+                 (dependencies-cljs str-name))
+        of-type (if macros "clj" "cljs")
+        lang :clj] ;;(if macros :js :clj)]
+    (if source
+      (js/console.log (str "Loading:" str-name of-type))
+      (js/console.log (str "Unable to load:" str-name of-type)))
+    (callback {:lang lang :source (str source)})))
+
+(def state
+  "A compiler state, which is shared across compilations."
+  (cljs/empty-state))
+
+(set-print-err-fn! #(js/console.log))
+
+(defn normalise [result]
+  (update result :error #(some-> % .-cause .-message)))
+
+(defn uate
+  "Evaluate a string of Clojurescript, with synthesis and music namespaces available."
+  [expr-str]
+  (cljs/eval-str
+    state
+    (str namespace-declaration expr-str)
+    nil
+    {:eval cljs/js-eval
+     :load loader}
+    normalise))
+
+;;(println "starting  uate...")
+;;(println "B" (uate "(fn [x] (+ x 1))")) ;; anon fns don't work ???
+;;(println "C" (uate "(defn foo [x] (+ x 1))")) ;; real fns do!
+;;(println "done uate")
+
+;;(def xxx (g/cos 1.9178))
+;;(println "a" (g/vec3 0))
+
 (defn init []
-  (let [rgb-fn start-rgb-fn] ;; FIXME (gee/random-code 3)]
+  (let [;;random-code (str (gee/get-random-code))
+        ;;random-code (str '(gamma.api/sin 1.9178))
+        ;;_ (print "random code: " random-code)
+        ;;rgb-fn start-rgb-fn
+        ;;rgb-fn (fn [pos] (g/vec3 pos 0))
+        rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
+        ;;rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
+        ;;_ (println rgb-fn)
+        ] ;; start-rgb-fn]
     (swap! app-state assoc
            :status-text "ok"
            :width 720 :height 720
@@ -104,13 +180,13 @@
 
 (defn main []
   (init)
-  (let [canvas (gdom/getElement "gl-canvas")
+  (let [canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
                                        (clj->js {:width (@app-state :width)
                                                  :height (@app-state :height)}))
 
         gl     (.getContext canvas "webgl")
-        status (gdom/getElement "status")]
+        status (dom/getElement "status")]
     (render gl {(g/gl-frag-color) (my-frag-color (@app-state :rgb-fn)
                                                  (@app-state :width)
                                                  (@app-state :height))})

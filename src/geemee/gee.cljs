@@ -4,17 +4,7 @@
             [clojure.set :as set]))
 
 ;; ======================================================================
-;(def     DEBUG-NO-POSTING          false) ;; set true when you don't want to post
-(defonce MAX-ALL-COMPONENT-VALUE   220)   ;; not too white
-(defonce MIN-ALL-COMPONENT-VALUE   36)    ;; not too dark
-(defonce MIN-ALL-COMPONENT-DELTA   10)    ;; not too similar
-(defonce MIN-NUM-COLORS            3)     ;; not too few colors (checkers be gone!)
-;(defonce TEST-IMAGE-SIZE           16)    ;; size for boring & img-hash check
-(defonce IMAGE-SIZE                720)   ;; size to post
 (defonce MAX-RANDOM-CODE-DEPTH     10)    ;; emperically got to this...
-;(defonce GIST-ARCHIVE-FILENAME     "1_archive.edn")
-;(defonce NUM-PARENT-TWEETS         200)   ;; 24 posts/day * 2 imgs = 48 img/day = ~4 days
-;(defonce MAX-POSSIBLE-PARENTS      5)     ;; top 5 tweets become parents
 (defonce MAX-GOOD-CODE-ATTEMPTS    200)   ;; don't want to give up too quickly
 (defonce PROB-TERM-FN              0.1)   ;; probability of term-fn vs term-vals
 (defonce PROB-TERNARY-FN           0.02)  ;; vs. binary or unary
@@ -29,25 +19,25 @@
 (defn- random-vec3 [] [(random-value) (random-value) (random-value)])
 (defn- random-vec4 [] [(random-value) (random-value) (random-value) (random-value)])
 
-(def term-vals #{random-scalar random-vec2 random-vec3 random-vec4}) ;; FIXME add pos
-(def term-fns #{}) ;; FIXME noise, turbulance, etc.
-(def unary-fns #{g/radians g/degrees g/sin g/cos g/tan g/asin g/acos g/atan
-                 g/exp g/log g/exp2 g/log2 g/sqrt g/inversesqrt
-                 g/abs g/sign g/floor g/ceil g/fract
-                 g/length g/normalize})
+(def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
+(def term-fns #{'pos}) ;; FIXME noise, turbulance, etc.
+(def unary-fns #{`g/radians `g/degrees `g/sin `g/cos `g/tan `g/asin `g/acos `g/atan
+                 `g/exp `g/log `g/exp2 `g/log2 `g/sqrt `g/inversesqrt
+                 `g/abs `g/sign `g/floor `g/ceil `g/fract
+                 `g/length `g/normalize})
                  ;; FIXME ideas
                  ;;`square `vsqrt `sigmoid `max-component `min-component
                  ;;`length `normalize `gradient
                  ;;`hue-from-rgb `lightness-from-rgb `saturation-from-rgb
                  ;;`hsl-from-rgb `red-from-hsl `green-from-hsl `blue-from-hsl
                  ;;`rgb-from-hsl `x `y `z `t `alpha
-(def binary-fns #{g/+ g/* g/- g/div g/atan g/pow g/mod g/max g/min g/step
-                  g/distance g/dot g/cross g/reflect})
+(def binary-fns #{`g/+ `g/* `g/- `g/div `g/atan `g/pow `g/mod `g/max `g/min `g/step
+                  `g/distance `g/dot `g/cross `g/reflect})
                   ;; FIXME ideas
                   ;;`vpow `vmod `dot `cross3
                   ;;`vmin `vmax `checker `scale `offset
                   ;;`adjust-hue `adjust-hsl `vconcat})
-(def ternary-fns #{g/mix g/clamp g/smoothstep g/faceforward g/refract})
+(def ternary-fns #{`g/mix `g/clamp `g/smoothstep `g/faceforward `g/refract})
 (def fns (set/union unary-fns binary-fns ternary-fns))
 
 ;; ======================================================================
@@ -76,7 +66,7 @@
   (if (< (rand) PROB-TERM-FN)
     (rand-nth (seq term-fns))
     (let [x (rand-nth (seq term-vals))]
-      (if (not= x `pos) (x) x))))
+      (if (not= x 'pos) (x) x))))
 ;;(random-terminal)
 
 (defn- random-code
@@ -139,7 +129,7 @@
   [node]
   (if (term-vals node)
     ;; must be pos--offset it
-    (cons `v+ (cons (random-vec2) '(clisk.live/pos)))
+    (cons `v+ (cons (random-vec2) 'pos))
     (if (term-fns node)
       (rand-nth (seq term-fns))
       (if (unary-fns node)
@@ -155,25 +145,25 @@
   nil sometimes to allow for copying other nodes in calling fn"
   [node]
   (when (< (rand) PROB-SINGLE-MUTATION) ;; mostly mutate here, return nil 5%
-    (condp = (type node)
+    (cond
       ;;* If the node is a scalar value, it can be adjusted by the
       ;;addition of some random amount.
-      java.lang.Double
+      (number? node)
       (+ node (random-value))
       ;;* If the node is a vector, it can be adjusted by adding random
       ;;amounts to each element.
-      clojure.lang.PersistentVector
+      (vector? node)
       (vec (map #(+ % (random-value)) node))
       ;;* If the node is a function, it can mutate into a different
       ;;function. For example (abs X) might become (cos X). If this
       ;;mutation occurs, the arguments of the function are also adjusted
       ;;if necessary to the correct number and types.
       ;;[I will keep to same function type]
-      clisk.node.Node
+      (fn? node)
       (mutate-symbol node)
-      clojure.lang.Symbol
+      (symbol? node)
       (mutate-symbol node)
-      clojure.lang.PersistentList
+      (list? node)
       (if (< (rand) 0.5)
         ;; variation on above
         (cons (mutate-symbol (first node)) (rest node))
@@ -181,6 +171,7 @@
         ;;for that node. For example (* X .3) might become X. This is the
         ;;inverse of the previous [next] type of mutation.
         (rand-nth (rest node)))
+      :default
       (println "UNEXPECTED TYPE:" node (type node))
       )))
 ;;[See mutate fn]* Finally, a node can become a copy of another node from the
@@ -213,16 +204,6 @@
   "does code x have at least one paren?"
   [x]
   (= (first (pr-str x)) \( ))
-
-(defn- good-components?
-  "are the values of a single color component too dark or not
-  different enough?"
-  [colors]
-  (let [min-v (apply min colors)
-        max-v (apply max colors)]
-    (and (< min-v MAX-ALL-COMPONENT-VALUE)
-         (> max-v MIN-ALL-COMPONENT-VALUE)
-         (> (- max-v min-v) MIN-ALL-COMPONENT-DELTA))))
 
 (defn- third [x] (nth x 2)) ;; should be stdlib
 

@@ -10,6 +10,11 @@
                  [org.clojure/clojurescript "1.8.51"]
                  [org.clojure/core.async "0.2.374"
                   :exclusions [org.clojure/tools.reader]]
+                 ;; for eval (via klangmeister)
+                 [org.clojure/tools.namespace "0.3.0-alpha3"]
+                 [org.clojure/tools.reader "1.0.0-alpha3"]
+                 [org.clojure/java.classpath "0.2.3"]
+                 ;; want my own so I get latest bugfixes
                  ;;[kovasb/gamma "0.0-135"]
                  [rogerallen/gamma "0.0-135-14-g07b9"]
                  ]
