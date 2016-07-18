@@ -4,7 +4,7 @@
             [clojure.set :as set]))
 
 ;; ======================================================================
-(defonce MAX-RANDOM-CODE-DEPTH     10)    ;; emperically got to this...
+(defonce MAX-RANDOM-CODE-DEPTH     2)    ;; emperically got to this...
 (defonce MAX-GOOD-CODE-ATTEMPTS    200)   ;; don't want to give up too quickly
 (defonce PROB-TERM-FN              0.1)   ;; probability of term-fn vs term-vals
 (defonce PROB-TERNARY-FN           0.02)  ;; vs. binary or unary
@@ -15,9 +15,9 @@
 ;; Functions used in creating imagery.
 (declare random-value)
 (defn- random-scalar [] (random-value))
-(defn- random-vec2 [] [(random-value) (random-value)])
-(defn- random-vec3 [] [(random-value) (random-value) (random-value)])
-(defn- random-vec4 [] [(random-value) (random-value) (random-value) (random-value)])
+(defn- random-vec2 [] '(gamma.api/vec2 (random-value) (random-value)))
+(defn- random-vec3 [] '(gamma.api/vec3 (random-value) (random-value) (random-value)))
+(defn- random-vec4 [] '(gamma.api/vec4 (random-value) (random-value) (random-value) (random-value)))
 
 (def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
 (def term-fns #{'pos}) ;; FIXME noise, turbulance, etc.

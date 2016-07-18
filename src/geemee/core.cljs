@@ -33,10 +33,16 @@
 (def err-fragment-shader {(g/gl-frag-color) (g/vec4 1.0 0.0 0.0 1.0)})
 (defn my-frag-color
   "wrapper to setup pos variable and call the rgbf"
-  [rgbf w h]
+  [rgb-fn w h]
   (let [tmp (g/div (g/gl-frag-coord) (g/vec4 w h 1.0 1.0))
         pos (g/swizzle tmp :xy)]
-    (g/vec4 (rgbf pos) 1))) ;; must have alpha=1 or you won't see it
+    (try
+      (g/vec4 (rgb-fn pos) 1) ;; must have alpha=1 or you won't see it
+      (catch :default e
+        (println e)
+        (println "Error rgb-fn" rgb-fn)
+        (swap! app-state assoc :status-text (str e " rgb-fn " rgb-fn))
+        (g/vec4 1 0 0 1)))))
 
 ;; ======================================================================
 ;; another wholesale ripoff of klangmeister
@@ -66,16 +72,15 @@
 (defn loader
   "A namespace loader that looks in the dependencies bundle for required namespaces."
   [{:keys [name macros path]} callback]
-  (let [_ (js/console.log (str "loader: " name " : " macros " : " path))
-        str-name (.-str name)
+  (let [str-name (.-str name)
         source (if macros
                  (dependencies-clj str-name)
                  (dependencies-cljs str-name))
         of-type (if macros "clj" "cljs")
-        lang :clj] ;;(if macros :js :clj)]
+        lang :clj]
     (if source
-      (js/console.log (str "Loading:" str-name of-type))
-      (js/console.log (str "Unable to load:" str-name of-type)))
+      (js/console.log (str "Loading: " str-name " " of-type))
+      (js/console.log (str "Unable to load: " str-name " " of-type)))
     (callback {:lang lang :source (str source)})))
 
 (def state
@@ -98,6 +103,9 @@
      :load loader}
     normalise))
 
+;; ======================================================================
+;; initialize & display a random code...
+
 ;;(println "starting  uate...")
 ;;(println "B" (uate "(fn [x] (+ x 1))")) ;; anon fns don't work ???
 ;;(println "C" (uate "(defn foo [x] (+ x 1))")) ;; real fns do!
@@ -106,20 +114,31 @@
 ;;(def xxx (g/cos 1.9178))
 ;;(println "a" (g/vec3 0))
 
-(defn init []
-  (let [;;random-code (str (gee/get-random-code))
-        ;;random-code (str '(gamma.api/sin 1.9178))
+;; BIG DEAL FIXME...
+;; okay, what I see is that if I get into a bad state, then I can't
+;; recover from it.  Will have to figure that out.
+
+(defn get-rgb-fn []
+  (let [random-code (str (gee/get-random-code))
+        ;;random-code (str '(gamma.api/vec3 pos 0))
+        ;;random-code (str '(gamma.api/sin (gamma.api/vec3 pos 0)))
         ;;_ (print "random code: " random-code)
-        ;;rgb-fn start-rgb-fn
-        ;;rgb-fn (fn [pos] (g/vec3 pos 0))
-        rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
-        ;;rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
-        ;;_ (println rgb-fn)
-        ] ;; start-rgb-fn]
-    (swap! app-state assoc
-           :status-text "ok"
-           :width 720 :height 720
-           :rgb-fn rgb-fn)))
+        ;;rgb-fn start-rgb-fn              ;; ok
+        ;;rgb-fn (fn [pos] (g/vec3 pos 0)) ;; ok
+        ;;rgb-fn (fn [pos] (g/cos 1.9))    ;; bad
+        ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
+        ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/cos 1.9))"))
+        rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
+        ;;_ (println "A rgb-fn" rgb-fn)
+        ]
+    rgb-fn))
+
+(defn init []
+  (swap! app-state assoc
+         :status-text "ok"
+         :width 360 :height 360
+         ;;:width 720 :height 720
+         :rgb-fn (get-rgb-fn)))
 
 (defn render [gl fragment-shader]
   (let [prog (p/program {:vertex-shader vertex-shader
