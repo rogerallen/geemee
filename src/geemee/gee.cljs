@@ -4,20 +4,21 @@
             [clojure.set :as set]))
 
 ;; ======================================================================
-(defonce MAX-RANDOM-CODE-DEPTH     2)    ;; emperically got to this...
-(defonce MAX-GOOD-CODE-ATTEMPTS    200)   ;; don't want to give up too quickly
-(defonce PROB-TERM-FN              0.1)   ;; probability of term-fn vs term-vals
-(defonce PROB-TERNARY-FN           0.02)  ;; vs. binary or unary
-(defonce PROB-BINARY-FN            0.3)   ;; vs ternary or unary
-(defonce PROB-SINGLE-MUTATION      0.95)  ;; mostly mutate vs. copy
+;; defonce?
+(def MAX-RANDOM-CODE-DEPTH  2)     ;; emperically got to this...
+(def MAX-GOOD-CODE-ATTEMPTS 200)   ;; don't want to give up too quickly
+(def PROB-TERM-FN           0.1)   ;; probability of term-fn vs term-vals
+(def PROB-TERNARY-FN        0.02)  ;; vs. binary or unary
+(def PROB-BINARY-FN         0.3)   ;; vs ternary or unary
+(def PROB-SINGLE-MUTATION   0.95)  ;; mostly mutate vs. copy
 
 ;; ======================================================================
 ;; Functions used in creating imagery.
 (declare random-value)
 (defn- random-scalar [] (random-value))
-(defn- random-vec2 [] '(gamma.api/vec2 (random-value) (random-value)))
-(defn- random-vec3 [] '(gamma.api/vec3 (random-value) (random-value) (random-value)))
-(defn- random-vec4 [] '(gamma.api/vec4 (random-value) (random-value) (random-value) (random-value)))
+(defn- random-vec2 [] (list `g/vec2 (random-value) (random-value)))
+(defn- random-vec3 [] (list `g/vec3 (random-value) (random-value) (random-value)))
+(defn- random-vec4 [] (list `g/vec4 (random-value) (random-value) (random-value) (random-value)))
 
 (def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
 (def term-fns #{'pos}) ;; FIXME noise, turbulance, etc.
@@ -51,14 +52,6 @@
     1 (rand-nth (seq unary-fns))))
 ;;(random-fn 3)
 
-(defn- random-value
-  "return a random value in the range (-3,3) with only 4 significant
-  digits to increase readability"
-  []
-  (let [x (* 3 (dec (rand 2)))
-        x (/ (Math/floor (* x 10000)) 10000.0)]
-    x))
-;;(random-value)
 
 (defn- random-terminal
   "return a random terminal value: vectors, position, or noise."

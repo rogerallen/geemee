@@ -197,13 +197,14 @@
 (defn update-status [e]
   (set! (.-innerHTML e) (@app-state :status-text)))
 
-(defn main []
+(defn draw-new-image []
   (init)
   (let [canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
                                        (clj->js {:width (@app-state :width)
                                                  :height (@app-state :height)}))
-
+        button (dom/getElement "update-btn")
+        _      (.addEventListener button "click" draw-new-image)
         gl     (.getContext canvas "webgl")
         status (dom/getElement "status")]
     (render gl {(g/gl-frag-color) (my-frag-color (@app-state :rgb-fn)
@@ -211,7 +212,7 @@
                                                  (@app-state :height))})
     (update-status status)))
 
-(main)
+(draw-new-image)
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
