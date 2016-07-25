@@ -23,6 +23,7 @@
 ;; ======================================================================
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:status-text "Hello world!"
+                          :init   false
                           :width  720
                           :height 720
                           :rgb-fn start-rgb-fn}))
@@ -127,9 +128,11 @@
         ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/cos 1.9))"))
         ;; THE REAL CALL
         random-code (str (gee/get-random-code))
-        _ (print "random code: " random-code)
+        ;;_ (print "random code: " random-code)
         rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
-        _ (println "A rgb-fn" rgb-fn)
+        ;;rgb-fn (defn my-fn [pos] (gamma.api/sqrt (gamma.api/vec3 0.5025 1.0828 -2.3827)))
+        ;;rgb-fn (defn my-fn [pos] (g/ (g/vec3 0.5 0.5 0.5) (g/vec3 0.25 0.1 -0.25)))
+        ;;_ (println "A rgb-fn" rgb-fn)
         ]
     rgb-fn))
 
@@ -199,12 +202,11 @@
 
 (defn draw-new-image []
   (init)
-  (let [canvas (dom/getElement "gl-canvas")
+  (let [_ (print "======================================================================\nlet draw-new-image")
+        canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
                                        (clj->js {:width (@app-state :width)
                                                  :height (@app-state :height)}))
-        button (dom/getElement "update-btn")
-        _      (.addEventListener button "click" draw-new-image)
         gl     (.getContext canvas "webgl")
         status (dom/getElement "status")]
     (render gl {(g/gl-frag-color) (my-frag-color (@app-state :rgb-fn)
@@ -212,7 +214,12 @@
                                                  (@app-state :height))})
     (update-status status)))
 
-(draw-new-image)
+(if (@app-state :init)
+  (draw-new-image)
+  (let [button (dom/getElement "update-btn")
+        _      (.addEventListener button "click" draw-new-image)
+        _      (swap! app-state assoc :init true)]
+    (draw-new-image)))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on

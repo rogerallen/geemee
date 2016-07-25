@@ -6,11 +6,11 @@
 
 ;; ======================================================================
 ;; defonce?
-(def MAX-RANDOM-CODE-DEPTH  2)     ;; emperically got to this...
+(def MAX-RANDOM-CODE-DEPTH  5)     ;; emperically got to this...
 (def MAX-GOOD-CODE-ATTEMPTS 200)   ;; don't want to give up too quickly
-(def PROB-TERM-FN           0.1)   ;; probability of term-fn vs term-vals
-(def PROB-TERNARY-FN        0.02)  ;; vs. binary or unary
-(def PROB-BINARY-FN         0.3)   ;; vs ternary or unary
+(def PROB-TERM-FN           0.5);;0.1)   ;; probability of term-fn vs term-vals
+(def PROB-TERNARY-FN        0.0);;0.02)  ;; vs. binary or unary
+(def PROB-BINARY-FN         1.0);;0.3)   ;; vs ternary or unary
 (def PROB-SINGLE-MUTATION   0.95)  ;; mostly mutate vs. copy
 
 ;; ======================================================================
@@ -21,16 +21,25 @@
 (defn- random-vec3 [] (list `g/vec3 (random-value) (random-value) (random-value)))
 (defn- random-vec4 [] (list `g/vec4 (random-value) (random-value) (random-value) (random-value)))
 
-(defn pos3 [] (list 'pos (random-value)))
+(defn pos3a [] (list `g/vec3 'pos (random-value)))
+(defn pos3b [] (list `g/vec3 (random-value) 'pos ))
 
-(def term-vals #{'pos pos3 random-scalar random-vec2 random-vec3 random-vec4})
-(def term-fns #{pos3 'pos})
-(def unary-fns #{`g/radians `g/degrees `g/sin `g/cos `g/tan `g/asin `g/acos `g/atan
+(def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
+
+(def term-fns #{pos3a pos3b})
+
+(def unary-fns #{;; these all just don't work
+                 `g/radians `g/degrees `g/sin `g/cos `g/tan `g/asin `g/acos `g/atan
                  `g/exp `g/log `g/exp2 `g/log2 `g/sqrt `g/inversesqrt
-                 `g/abs `g/sign `g/floor `g/ceil `g/fract
-                 `g/length `g/normalize})
-(def binary-fns #{`g/+ `g/* `g/- `g/div `g/atan `g/pow `g/mod `g/max `g/min `g/step
-                  `g/distance `g/dot `g/cross `g/reflect})
+                 `g/abs `g/sign `g/floor `g/ceil `g/fract `g/normalize
+                 ;; these return 1 value
+                 ;;`g/length
+                 })
+(def binary-fns #{`g/+ `g/* `g/- `g/div
+                  ;; these don't work
+                  ;;`g/atan `g/pow `g/mod `g/max `g/min `g/step
+                  ;;`g/distance `g/dot `g/cross `g/reflect
+                  })
 (def ternary-fns #{`g/mix `g/clamp `g/smoothstep `g/faceforward `g/refract})
 (def fns (set/union unary-fns binary-fns ternary-fns))
 
@@ -38,21 +47,34 @@
 (defn- random-fn
   "return a random function.  Parameter n selects either 1 or 2
   parameters."
-  [n]
-  (case n
+  [num-function-parameters]
+  (case num-function-parameters
     3 (rand-nth (seq ternary-fns))
     2 (rand-nth (seq binary-fns))
     1 (rand-nth (seq unary-fns))))
+
 ;;(random-fn 3)
 
+(defn- random-value
+  "return a random value in the range (-3,3) with only 4 significant
+  digits to increase readability"
+  []
+  (let [x (* 3 (dec (rand 2)))
+        x (/ (Math/floor (* x 10000)) 10000.0)]
+    x))
 
 (defn- random-terminal
   "return a random terminal value: vectors, position, or noise."
-  []
+  [out-width]
   (if (< (rand) PROB-TERM-FN)
-    (rand-nth (seq term-fns))
-    (let [x (rand-nth (seq term-vals))]
-      (if (not= x 'pos) (x) x))))
+    ((rand-nth (seq term-fns))) ;; FIXME for out-width
+    (case out-width
+      4 (random-vec4)
+      3 (random-vec3)
+      2 (random-vec2)
+      1 (random-scalar))))
+;;    (let [x (rand-nth (seq term-vals))]
+;;      (if (not= x 'pos) (x) x))))
 ;;(random-terminal)
 
 (defn- random-code
@@ -61,14 +83,14 @@
   the size.  Create terminal fn with increasing probability as depth
   gets smaller.  Functions are not parameter-checked so runtime
   exceptions can be expected."
-  ([depth]
+  ([out-width depth]
    (if (and (pos? depth) (pos? (rand-int depth)))
      (if (< (rand) PROB-TERNARY-FN)
-       (cons (random-fn 3) (repeatedly 3 #(random-code (dec depth))))
+       (cons (random-fn 3) (repeatedly 3 #(random-code out-width (dec depth))))
        (if (< (rand) PROB-BINARY-FN)
-         (cons (random-fn 2) (repeatedly 2 #(random-code (dec depth))))
-         (cons (random-fn 1) (repeatedly 1 #(random-code (dec depth))))))
-     (random-terminal))))
+         (cons (random-fn 2) (repeatedly 2 #(random-code out-width (dec depth))))
+         (cons (random-fn 1) (repeatedly 1 #(random-code out-width (dec depth))))))
+     (random-terminal out-width))))
 ;;(random-code 5)
 
 (defn- locs
@@ -245,5 +267,8 @@
   "get a good image-creation code created randomly"
   []
   ;;(get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH)))
-  '(gamma.api/vec3 0 pos)
+  (let [x (random-code 3 MAX-RANDOM-CODE-DEPTH)
+        _ (print "random-code" x)]
+    x)
+  ;;'(gamma.api/vec3 0 pos)
   )
