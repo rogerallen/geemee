@@ -35,9 +35,7 @@
   "wrapper to setup pos variable and call the rgbf"
   [rgb-fn w h]
   (let [tmp (g/div (g/gl-frag-coord) (g/vec4 w h 1.0 1.0))
-        ;;pos (g/swizzle tmp :xy)
-        pos (g/vec3 (g/swizzle tmp :xy) 0) ;; try making pos 3-component
-        ]
+        pos (g/swizzle tmp :xy)]
     (try
       (g/vec4 (rgb-fn pos) 1) ;; must have alpha=1 or you won't see it
       (catch :default e
@@ -121,20 +119,17 @@
 ;; recover from it.  Will have to figure that out.
 
 (defn get-rgb-fn []
-  (let [;;random-code (str (gee/get-random-code))
-
-        ;;random-code (str '(gamma.api/vec3 pos 0))
-        ;;random-code (str '(gamma.api/sin (gamma.api/vec3 pos 0)))
-        ;;_ (print "random code: " random-code)
-        rgb-fn start-rgb-fn              ;; ok
+  (let [;;rgb-fn start-rgb-fn              ;; ok
         ;;rgb-fn (fn [pos] (g/vec3 pos 0)) ;; ok
         ;;rgb-fn (defn my-fn [pos] (g/vec3 pos 1)) ;; ok
         ;;rgb-fn (fn [pos] (g/cos 1.9))    ;; bad
         ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
         ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/cos 1.9))"))
         ;; THE REAL CALL
-        ;;rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
-        ;;_ (println "A rgb-fn" rgb-fn)
+        random-code (str (gee/get-random-code))
+        _ (print "random code: " random-code)
+        rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
+        _ (println "A rgb-fn" rgb-fn)
         ]
     rgb-fn))
 

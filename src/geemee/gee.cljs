@@ -244,4 +244,6 @@
 (defn- get-random-code
   "get a good image-creation code created randomly"
   []
-  (get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH))))
+  ;;(get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH)))
+  '(gamma.api/vec3 0 pos)
+  )
