@@ -35,7 +35,9 @@
   "wrapper to setup pos variable and call the rgbf"
   [rgb-fn w h]
   (let [tmp (g/div (g/gl-frag-coord) (g/vec4 w h 1.0 1.0))
-        pos (g/swizzle tmp :xy)]
+        ;;pos (g/swizzle tmp :xy)
+        pos (g/vec3 (g/swizzle tmp :xy) 0) ;; try making pos 3-component
+        ]
     (try
       (g/vec4 (rgb-fn pos) 1) ;; must have alpha=1 or you won't see it
       (catch :default e
@@ -125,11 +127,13 @@
         ;;_ (print "random code: " random-code)
         ;;rgb-fn start-rgb-fn              ;; ok
         ;;rgb-fn (fn [pos] (g/vec3 pos 0)) ;; ok
+        ;;rgb-fn (defn my-fn [pos] (g/vec3 pos 1)) ;; ok
         ;;rgb-fn (fn [pos] (g/cos 1.9))    ;; bad
         ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
         ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/cos 1.9))"))
+        ;; THE REAL CALL
         rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
-        ;;_ (println "A rgb-fn" rgb-fn)
+        _ (println "A rgb-fn" rgb-fn)
         ]
     rgb-fn))
 

@@ -1,5 +1,6 @@
 (ns geemee.gee
   (:require [gamma.api   :as g]
+            [geemee.api  :as a]
             [clojure.zip :as zip]
             [clojure.set :as set]))
 
@@ -20,24 +21,16 @@
 (defn- random-vec3 [] (list `g/vec3 (random-value) (random-value) (random-value)))
 (defn- random-vec4 [] (list `g/vec4 (random-value) (random-value) (random-value) (random-value)))
 
-(def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
-(def term-fns #{'pos}) ;; FIXME noise, turbulance, etc.
+(defn pos3 [] (list 'pos (random-value)))
+
+(def term-vals #{'pos pos3 random-scalar random-vec2 random-vec3 random-vec4})
+(def term-fns #{pos3 'pos})
 (def unary-fns #{`g/radians `g/degrees `g/sin `g/cos `g/tan `g/asin `g/acos `g/atan
                  `g/exp `g/log `g/exp2 `g/log2 `g/sqrt `g/inversesqrt
                  `g/abs `g/sign `g/floor `g/ceil `g/fract
                  `g/length `g/normalize})
-                 ;; FIXME ideas
-                 ;;`square `vsqrt `sigmoid `max-component `min-component
-                 ;;`length `normalize `gradient
-                 ;;`hue-from-rgb `lightness-from-rgb `saturation-from-rgb
-                 ;;`hsl-from-rgb `red-from-hsl `green-from-hsl `blue-from-hsl
-                 ;;`rgb-from-hsl `x `y `z `t `alpha
 (def binary-fns #{`g/+ `g/* `g/- `g/div `g/atan `g/pow `g/mod `g/max `g/min `g/step
                   `g/distance `g/dot `g/cross `g/reflect})
-                  ;; FIXME ideas
-                  ;;`vpow `vmod `dot `cross3
-                  ;;`vmin `vmax `checker `scale `offset
-                  ;;`adjust-hue `adjust-hsl `vconcat})
 (def ternary-fns #{`g/mix `g/clamp `g/smoothstep `g/faceforward `g/refract})
 (def fns (set/union unary-fns binary-fns ternary-fns))
 
