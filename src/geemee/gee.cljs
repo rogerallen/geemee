@@ -269,4 +269,4 @@
   "get a good image-creation code created randomly"
   []
   ;;(get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH)))
-  (random-code 3 MAX-RANDOM-CODE-DEPTH))
+  (list 'defn 'pixel '[pos] (random-code 3 MAX-RANDOM-CODE-DEPTH)))

@@ -4,7 +4,8 @@
             [goog.dom      :as dom]
             [goog.webgl    :as wgl]
             [geemee.gee    :as gee]
-            [cljs.js       :as cljs])
+            [cljs.js       :as cljs]
+            [fipp.clojure  :as fc])
   (:require-macros [geemee.macros :as macro]))
 
 (enable-console-print!)
@@ -96,10 +97,12 @@
 ;; ======================================================================
 ;; initialize & display a random code...
 (defn get-rgb-fn []
-  (let [random-code (str (gee/get-random-code))
-        ;; pretty print FIXME
-        _ (swap! app-state assoc :status-text (str "<code>" random-code "</code>"))
-        rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))]
+  (let [random-code (gee/get-random-code)
+        random-code-str (str random-code)
+        pretty-random-code (-> random-code fc/pprint with-out-str)
+        _ (swap! app-state assoc
+                 :status-text (str "<pre>" pretty-random-code "</pre>"))
+        rgb-fn (:value (uate random-code-str))]
     rgb-fn))
 
 (defn init []
@@ -166,7 +169,6 @@
   (set! (.-innerHTML e) (@app-state :status-text)))
 
 (defn draw-new-image []
-  (println "draw-new-image")
   (init)
   (let [canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
