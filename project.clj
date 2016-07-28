@@ -16,7 +16,7 @@
                  [org.clojure/java.classpath "0.2.3"]
                  ;; want my own so I get latest bugfixes
                  ;;[kovasb/gamma "0.0-135"]
-                 [rogerallen/gamma "0.0-135-14-g07b9"]
+                 [rogerallen/gamma "0.0-135-15-gfd44"]
                  ]
 
   :plugins [[lein-figwheel "0.5.4-3"]

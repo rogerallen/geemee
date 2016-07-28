@@ -6,41 +6,43 @@
 
 ;; ======================================================================
 ;; defonce?
-(def MAX-RANDOM-CODE-DEPTH  5)     ;; emperically got to this...
+(def MAX-RANDOM-CODE-DEPTH  6);; 10)     ;; emperically got to this...
 (def MAX-GOOD-CODE-ATTEMPTS 200)   ;; don't want to give up too quickly
 (def PROB-TERM-FN           0.5);;0.1)   ;; probability of term-fn vs term-vals
-(def PROB-TERNARY-FN        0.0);;0.02)  ;; vs. binary or unary
-(def PROB-BINARY-FN         1.0);;0.3)   ;; vs ternary or unary
+(def PROB-TERNARY-FN        0.2);;0.02)  ;; vs. binary or unary
+(def PROB-BINARY-FN         0.5);;0.3)   ;; vs ternary or unary
 (def PROB-SINGLE-MUTATION   0.95)  ;; mostly mutate vs. copy
 
 ;; ======================================================================
 ;; Functions used in creating imagery.
 (declare random-value)
 (defn- random-scalar [] (random-value))
-(defn- random-vec2 [] (list `g/vec2 (random-value) (random-value)))
-(defn- random-vec3 [] (list `g/vec3 (random-value) (random-value) (random-value)))
-(defn- random-vec4 [] (list `g/vec4 (random-value) (random-value) (random-value) (random-value)))
+(defn- random-vec2 [] (list 'g/vec2 (random-value) (random-value)))
+(defn- random-vec3 [] (list 'g/vec3 (random-value) (random-value) (random-value)))
+(defn- random-vec4 [] (list 'g/vec4 (random-value) (random-value) (random-value) (random-value)))
 
-(defn pos3a [] (list `g/vec3 'pos (random-value)))
-(defn pos3b [] (list `g/vec3 (random-value) 'pos ))
+(defn pos3a [] (list 'g/vec3 'pos (random-value)))
+(defn pos3b [] (list 'g/vec3 (random-value) 'pos ))
 
 (def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
 
 (def term-fns #{pos3a pos3b})
 
-(def unary-fns #{;; these all just don't work
-                 `g/radians `g/degrees `g/sin `g/cos `g/tan `g/asin `g/acos `g/atan
-                 `g/exp `g/log `g/exp2 `g/log2 `g/sqrt `g/inversesqrt
-                 `g/abs `g/sign `g/floor `g/ceil `g/fract `g/normalize
+(def unary-fns #{'g/radians 'g/degrees 'g/sin 'g/cos 'g/tan 'g/asin 'g/acos 'g/atan
+                 'g/exp 'g/log 'g/exp2 'g/log2 'g/sqrt 'g/inversesqrt
+                 'g/abs 'g/sign 'g/floor 'g/ceil 'g/fract 'g/normalize
                  ;; these return 1 value
-                 ;;`g/length
+                 ;;'g/length
                  })
-(def binary-fns #{`g/+ `g/* `g/- `g/div
+(def binary-fns #{'g/+ 'g/* 'g/- 'g/div
                   ;; these don't work
-                  ;;`g/atan `g/pow `g/mod `g/max `g/min `g/step
-                  ;;`g/distance `g/dot `g/cross `g/reflect
+                  'g/atan 'g/pow 'g/mod 'g/step
+                  ;; 'g/max 'g/min (wrong args vec3?)
+                  ;;'g/distance 'g/dot 'g/cross 'g/reflect
                   })
-(def ternary-fns #{`g/mix `g/clamp `g/smoothstep `g/faceforward `g/refract})
+(def ternary-fns #{'g/smoothstep 'g/mix
+                   ;;'g/clamp 'g/faceforward 'g/refract
+                   })
 (def fns (set/union unary-fns binary-fns ternary-fns))
 
 ;; ======================================================================
@@ -267,8 +269,4 @@
   "get a good image-creation code created randomly"
   []
   ;;(get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH)))
-  (let [x (random-code 3 MAX-RANDOM-CODE-DEPTH)
-        _ (print "random-code" x)]
-    x)
-  ;;'(gamma.api/vec3 0 pos)
-  )
+  (random-code 3 MAX-RANDOM-CODE-DEPTH))

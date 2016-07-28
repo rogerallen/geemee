@@ -8,9 +8,7 @@
   (:require-macros [geemee.macros :as macro]))
 
 (enable-console-print!)
-
-;;(print "gee?" gee/MAX-GOOD-CODE-ATTEMPTS)
-;;(print "gee" (gee/random-code 10))
+(set-print-err-fn! #(js/console.log))
 
 ;; ======================================================================
 ;; starting fragment shader
@@ -20,6 +18,7 @@
     (g/vec3 (g/sin (g/* 19 r))
             (g/cos (g/* 13 r))
             (g/sin (g/*  7 r)))))
+
 ;; ======================================================================
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:status-text "Hello world!"
@@ -52,23 +51,15 @@
 (def namespace-declaration
   (macro/literally
     (ns geemee.live
-      (:require gamma.api)
-      )))
+      (:require [gamma.api :as g]))))
 
 (def dependencies-cljs
-  "A bundle of dependencies."
-  (macro/sources-cljs
-   gamma.api
-   gamma.ast
-   ))
+  "The bundle of cljs dependencies."
+  (macro/sources-cljs gamma.api gamma.ast))
 
 (def dependencies-clj
-  "A bundle of dependencies."
-  (macro/sources-clj
-   gamma.api
-   ))
-
-;;(spit "foo_dependencies.txt" dependencies)
+  "The bundle of clj (macros) dependencies."
+  (macro/sources-clj gamma.api))
 
 (defn loader
   "A namespace loader that looks in the dependencies bundle for required namespaces."
@@ -88,8 +79,6 @@
   "A compiler state, which is shared across compilations."
   (cljs/empty-state))
 
-(set-print-err-fn! #(js/console.log))
-
 (defn normalise [result]
   (update result :error #(some-> % .-cause .-message)))
 
@@ -106,39 +95,15 @@
 
 ;; ======================================================================
 ;; initialize & display a random code...
-
-;;(println "starting  uate...")
-;;(println "B" (uate "(fn [x] (+ x 1))")) ;; anon fns don't work ???
-;;(println "C" (uate "(defn foo [x] (+ x 1))")) ;; real fns do!
-;;(println "done uate")
-
-;;(def xxx (g/cos 1.9178))
-;;(println "a" (g/vec3 0))
-
-;; BIG DEAL FIXME...
-;; okay, what I see is that if I get into a bad state, then I can't
-;; recover from it.  Will have to figure that out.
-
 (defn get-rgb-fn []
-  (let [;;rgb-fn start-rgb-fn              ;; ok
-        ;;rgb-fn (fn [pos] (g/vec3 pos 0)) ;; ok
-        ;;rgb-fn (defn my-fn [pos] (g/vec3 pos 1)) ;; ok
-        ;;rgb-fn (fn [pos] (g/cos 1.9))    ;; bad
-        ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/vec3 0 pos))"))
-        ;;rgb-fn (:value (uate "(defn my-fn [pos] (gamma.api/cos 1.9))"))
-        ;; THE REAL CALL
-        random-code (str (gee/get-random-code))
-        ;;_ (print "random code: " random-code)
-        rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))
-        ;;rgb-fn (defn my-fn [pos] (gamma.api/sqrt (gamma.api/vec3 0.5025 1.0828 -2.3827)))
-        ;;rgb-fn (defn my-fn [pos] (g/ (g/vec3 0.5 0.5 0.5) (g/vec3 0.25 0.1 -0.25)))
-        ;;_ (println "A rgb-fn" rgb-fn)
-        ]
+  (let [random-code (str (gee/get-random-code))
+        ;; pretty print FIXME
+        _ (swap! app-state assoc :status-text (str "<code>" random-code "</code>"))
+        rgb-fn (:value (uate (str "(defn my-fn [pos] " random-code ")")))]
     rgb-fn))
 
 (defn init []
   (swap! app-state assoc
-         :status-text "ok"
          :width 360 :height 360
          ;;:width 720 :height 720
          :rgb-fn (get-rgb-fn)))
@@ -201,9 +166,9 @@
   (set! (.-innerHTML e) (@app-state :status-text)))
 
 (defn draw-new-image []
+  (println "draw-new-image")
   (init)
-  (let [_ (print "======================================================================\nlet draw-new-image")
-        canvas (dom/getElement "gl-canvas")
+  (let [canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
                                        (clj->js {:width (@app-state :width)
                                                  :height (@app-state :height)}))
@@ -214,12 +179,15 @@
                                                  (@app-state :height))})
     (update-status status)))
 
-(if (@app-state :init)
-  (draw-new-image)
-  (let [button (dom/getElement "update-btn")
-        _      (.addEventListener button "click" draw-new-image)
-        _      (swap! app-state assoc :init true)]
-    (draw-new-image)))
+(defn clicked []
+  (draw-new-image))
+
+(do (if (@app-state :init)
+      (draw-new-image)
+      (let [button (dom/getElement "update-btn")
+            _      (.addEventListener button "click" clicked)
+            _      (swap! app-state assoc :init true)]
+        (draw-new-image))))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
