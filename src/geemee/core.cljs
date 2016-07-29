@@ -26,7 +26,8 @@
                           :init   false
                           :width  720
                           :height 720
-                          :rgb-fn start-rgb-fn}))
+                          :rgb-fn start-rgb-fn
+                          :uate-state nil}))
 
 ;; this state doesn't care about being overwritten on reload
 (def vertex-position     (g/attribute "a_VertexPosition" :vec2))
@@ -42,7 +43,7 @@
       (catch :default e
         (println e)
         (println "Error rgb-fn" rgb-fn)
-        (swap! app-state assoc :status-text (str e " rgb-fn " rgb-fn))
+        (swap! app-state assoc :status-text (str "<pre>" (str e " rgb-fn " rgb-fn) "</pre>"))
         (g/vec4 1 0 0 1)))))
 
 ;; ======================================================================
@@ -65,7 +66,8 @@
 (defn loader
   "A namespace loader that looks in the dependencies bundle for required namespaces."
   [{:keys [name macros path]} callback]
-  (let [str-name (.-str name)
+  (let [;;_ (println "loader" name macros path)
+        str-name (.-str name)
         source (if macros
                  (dependencies-clj str-name)
                  (dependencies-cljs str-name))
@@ -76,7 +78,7 @@
       (js/console.log (str "Unable to load: " str-name " " of-type)))
     (callback {:lang lang :source (str source)})))
 
-(def state
+#_(def state
   "A compiler state, which is shared across compilations."
   (cljs/empty-state))
 
@@ -86,13 +88,15 @@
 (defn uate
   "Evaluate a string of Clojurescript, with synthesis and music namespaces available."
   [expr-str]
+  (println "uate")
   (cljs/eval-str
-    state
+    (:uate-state @app-state);;state
     (str namespace-declaration expr-str)
     nil
     {:eval cljs/js-eval
      :load loader}
     normalise))
+
 
 ;; ======================================================================
 ;; initialize & display a random code...
@@ -102,7 +106,15 @@
         pretty-random-code (-> random-code fc/pprint with-out-str)
         _ (swap! app-state assoc
                  :status-text (str "<pre>" pretty-random-code "</pre>"))
-        rgb-fn (:value (uate random-code-str))]
+        x (uate random-code-str)
+        rgb-fn (if (:error x)
+                 (do
+                   (println "evaluate error:" (:error x))
+                   (swap! app-state assoc
+                          :status-text (str "<pre>" "Evaluation error: " (:error x) "</pre>"))
+                   (fn [pos] (g/vec3 1.0 0.0 0.0)))
+                 (:value x))
+        ]
     rgb-fn))
 
 (defn init []
@@ -132,7 +144,7 @@
     (.compileShader gl vs)
     (if-not (.getShaderParameter gl vs wgl/COMPILE_STATUS)
       (do
-        (swap! app-state assoc :status-text (.getShaderInfoLog gl vs))
+        (swap! app-state assoc :status-text (str "<pre>" (.getShaderInfoLog gl vs) "</pre>"))
         (print (.getShaderInfoLog gl vs))
         (println "src:" (-> prog :vertex-shader :glsl))
         (render gl err-fragment-shader))
@@ -141,7 +153,7 @@
         (.compileShader gl fs)
         (if-not (.getShaderParameter gl fs wgl/COMPILE_STATUS)
           (do
-            (swap! app-state assoc :status-text (.getShaderInfoLog gl fs))
+            (swap! app-state assoc :status-text (str "<pre>" (.getShaderInfoLog gl fs) "</pre>"))
             (print (.getShaderInfoLog gl fs))
             (println "src:" (-> prog :fragment-shader :glsl))
             (render gl err-fragment-shader))
@@ -151,7 +163,7 @@
             (.linkProgram gl pgm)
             (if-not (.getProgramParameter gl pgm wgl/LINK_STATUS)
               (do
-                (swap! app-state assoc :status-text (.getProgramInfoLog gl pgm))
+                (swap! app-state assoc :status-text (str "<pre>" (.getProgramInfoLog gl pgm) "</pre>"))
                 (print "ERROR PGM:" (.getProgramInfoLog gl pgm))
                 (render gl err-fragment-shader))
               (do
@@ -184,12 +196,22 @@
 (defn clicked []
   (draw-new-image))
 
-(do (if (@app-state :init)
-      (draw-new-image)
-      (let [button (dom/getElement "update-btn")
-            _      (.addEventListener button "click" clicked)
-            _      (swap! app-state assoc :init true)]
-        (draw-new-image))))
+(defn after-load []
+  (println "after-load")
+  (if (@app-state :init)
+    (draw-new-image)
+    (let [_ (println "not init")
+          button (dom/getElement "update-btn")
+          _      (.addEventListener button "click" clicked)
+          _      (swap! app-state assoc
+                        :uate-state (cljs/empty-state)
+                        :init true)
+          ;; no change _ (uate "(+ 1 1)")
+          ]
+      (draw-new-image))))
+
+(set! (.-onload js/window)
+      (after-load))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
