@@ -93,7 +93,26 @@
          (cons (random-fn 2) (repeatedly 2 #(random-code out-width (dec depth))))
          (cons (random-fn 1) (repeatedly 1 #(random-code out-width (dec depth))))))
      (random-terminal out-width))))
-;;(random-code 5)
+
+;; combine various widths
+;; 3
+;; 2 1
+;; 1 2
+;; 1 1 1
+;;
+;; 2
+;; 1 1
+(defn- random-code1
+  [out-width depth]
+  (let [r (rand)
+        rc (if (< r 0.333)
+             (list 'g/vec3
+                   (random-code 1 depth) (random-code 1 depth) (random-code 1 depth))
+             (if (< r 0.666)
+               (list 'g/vec3
+                     (random-code 2 depth) (random-code 1 depth))
+               (random-code 3 depth)))]
+    rc))
 
 (defn- locs
   "return all zip locations within the s-expression.  each location
@@ -210,63 +229,7 @@
       ;; or, replace with new mutant
       (replace-loc-with-node loc1 new-node))))
 
-(defn- good-random-code?
-  "does code x have at least one paren?"
-  [x]
-  (= (first (pr-str x)) \( ))
-
-(defn- third [x] (nth x 2)) ;; should be stdlib
-
-;;
-
-(defn- get-good-code*
-  "The main code-generation workhorse function.  Given a
-  code-creator-fn (random, breed or combine), return some code that
-  creates non-boring images.  Tries for a while, but if it gives up,
-  it returns nil."
-  [code-creator-fn]
-  (try
-    (let [cur-count  (atom 0)
-          good-image (atom false)
-          ;;[old-hashes old-image-hashes] (get-old-hashes)
-          good-code  (atom nil)]
-      (while (and (< @cur-count MAX-GOOD-CODE-ATTEMPTS)
-                  (not @good-image))
-        (swap! cur-count inc)
-        (try
-          (let [cur-code (code-creator-fn)
-                ;;_ (println "\n??" cur-code)
-                ;;_ (when-not (nil? (old-hashes (hash cur-code)))
-                ;;    (throw (js/Error. "previously created code")))
-                _ (when-not (good-random-code? cur-code)
-                    (throw (js/Error. "badly created code")))
-                ;; FIXME -- have to try out drawing
-                ;;img (image (eval cur-code) :size TEST-IMAGE-SIZE)
-                ;;_ (when-not (nil? (old-image-hashes (image-hash img)))
-                ;;    (throw (js/Error. "previously created image")))
-                ;; FIXME? _ (when-not (good-image? img)
-                ;;    (throw (js/Error. "boring image")))
-                ]
-            ;; no exception--got a good one
-            (println "\n" @cur-count "got:" cur-code)
-            (reset! good-image true)
-            (reset! good-code cur-code))
-          (catch js/Error e
-            ;;(println @cur-count "js/Error" (.getMessage e))
-            (print "e")
-            )
-          ;;(catch java.util.concurrent.ExecutionException e
-          ;;  ;;(println @cur-count "execution exception")
-          ;;  (print "E")
-          ;;  )
-          ))
-      @good-code)
-    (catch js/Error e
-      (println "get-good-code* Setup js/Error" e)
-      nil)))
-
 (defn- get-random-code
-  "get a good image-creation code created randomly"
+  "return a function that creates random gamma shader RGB code"
   []
-  ;;(get-good-code* (fn [] (random-code MAX-RANDOM-CODE-DEPTH)))
   (list 'defn 'pixel '[pos] (random-code 3 MAX-RANDOM-CODE-DEPTH)))
