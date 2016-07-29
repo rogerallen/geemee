@@ -8,7 +8,15 @@ FIXME: Write a paragraph about the library/project and highlight its goals.
 
 ## Setup
 
-You'll need a local-repo of https://github.com/kovasb/gamma/
+You'll need a local-repo of https://github.com/rogerallen/gamma/ due to issue #1
+
+Basically,
+```
+git clone the repo
+git checkout fix-eval
+lein jar
+lein localrepo install target/gamma-0.0-135-15-gfd44.jar rogerallen/gamma 0.0-135-15-gfd44
+```
 
 To get an interactive development environment run:
 
