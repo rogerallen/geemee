@@ -23,10 +23,14 @@
 
 (defn pos3a [] (list 'g/vec3 'pos (random-value)))
 (defn pos3b [] (list 'g/vec3 (random-value) 'pos ))
+(defn pos1a [] (list 'g/swizzle 'pos ':x))
+(defn pos1b [] (list 'g/swizzle 'pos ':y))
 
 (def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
 
-(def term-fns #{pos3a pos3b})
+(def term3-fns #{pos3a pos3b}) ;; FIXME eventually noise, etc
+(def term2-fns #{'pos})
+(def term1-fns #{pos1a pos1b})
 
 (def unary-fns #{'g/radians 'g/degrees 'g/sin 'g/cos 'g/tan 'g/asin 'g/acos 'g/atan
                  'g/exp 'g/log 'g/exp2 'g/log2 'g/sqrt 'g/inversesqrt
@@ -55,7 +59,13 @@
     2 (rand-nth (seq binary-fns))
     1 (rand-nth (seq unary-fns))))
 
-;;(random-fn 3)
+(defn- random-term-fn
+  "return a random terminal function with a specific width"
+  [out-width]
+  (case out-width
+    3 ((rand-nth (seq term3-fns)))
+    2 'pos ;;((rand-nth (seq term2-fns)))
+    1 ((rand-nth (seq term1-fns)))))
 
 (defn- random-value
   "return a random value in the range (-3,3) with only 4 significant
@@ -69,9 +79,8 @@
   "return a random terminal value: vectors, position, or noise."
   [out-width]
   (if (< (rand) PROB-TERM-FN)
-    ((rand-nth (seq term-fns))) ;; FIXME for out-width
+    (random-term-fn out-width)
     (case out-width
-      4 (random-vec4)
       3 (random-vec3)
       2 (random-vec2)
       1 (random-scalar))))
@@ -79,6 +88,7 @@
 ;;      (if (not= x 'pos) (x) x))))
 ;;(random-terminal)
 
+(declare random-code1)
 (defn- random-code
   "Recursively create & return a random s-expression made up of
   functions or terminals. When depth=0, create a terminal to control
@@ -88,31 +98,33 @@
   ([out-width depth]
    (if (and (pos? depth) (pos? (rand-int depth)))
      (if (< (rand) PROB-TERNARY-FN)
-       (cons (random-fn 3) (repeatedly 3 #(random-code out-width (dec depth))))
+       (cons (random-fn 3) (repeatedly 3 #(random-code1 out-width (dec depth))))
        (if (< (rand) PROB-BINARY-FN)
-         (cons (random-fn 2) (repeatedly 2 #(random-code out-width (dec depth))))
-         (cons (random-fn 1) (repeatedly 1 #(random-code out-width (dec depth))))))
+         (cons (random-fn 2) (repeatedly 2 #(random-code1 out-width (dec depth))))
+         (cons (random-fn 1) (repeatedly 1 #(random-code1 out-width (dec depth))))))
      (random-terminal out-width))))
 
-;; combine various widths
-;; 3
-;; 2 1
-;; 1 2
-;; 1 1 1
-;;
-;; 2
-;; 1 1
 (defn- random-code1
+  "make various independent formulas, depending on out-width"
   [out-width depth]
-  (let [r (rand)
-        rc (if (< r 0.333)
-             (list 'g/vec3
-                   (random-code 1 depth) (random-code 1 depth) (random-code 1 depth))
-             (if (< r 0.666)
-               (list 'g/vec3
-                     (random-code 2 depth) (random-code 1 depth))
-               (random-code 3 depth)))]
-    rc))
+  (let [r (rand)]
+    (case out-width
+      3 (cond
+          (< r 0.25) (list 'g/vec3
+                           (random-code 1 depth)
+                           (random-code 1 depth)
+                           (random-code 1 depth))
+          (< r 0.50) (list 'g/vec3
+                           (random-code 2 depth) (random-code 1 depth))
+          (< r 0.75) (list 'g/vec3
+                           (random-code 1 depth) (random-code 2 depth))
+          :else      (random-code 3 depth))
+      2 (cond
+          (< r 0.5) (list 'g/vec2
+                          (random-code 1 depth) (random-code 1 depth))
+          :else      (random-code 2 depth))
+      1 (random-code 1 depth)
+      :else nil))) ;; FIXME ERROR
 
 (defn- locs
   "return all zip locations within the s-expression.  each location
@@ -159,8 +171,8 @@
   (if (term-vals node)
     ;; must be pos--offset it
     (cons `v+ (cons (random-vec2) 'pos))
-    (if (term-fns node)
-      (rand-nth (seq term-fns))
+    (if (term3-fns node) ;; FIXME term1, term2, etc.
+      (rand-nth (seq term3-fns))
       (if (unary-fns node)
         (rand-nth (seq unary-fns))
         (if (binary-fns node)
@@ -232,4 +244,4 @@
 (defn- get-random-code
   "return a function that creates random gamma shader RGB code"
   []
-  (list 'defn 'pixel '[pos] (random-code 3 MAX-RANDOM-CODE-DEPTH)))
+  (list 'defn 'pixel '[pos] (random-code1 3 MAX-RANDOM-CODE-DEPTH)))
