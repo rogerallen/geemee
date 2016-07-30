@@ -29,6 +29,13 @@
                           :rgb-fn start-rgb-fn
                           :uate-state nil}))
 
+;; ======================================================================
+(defn app-status! [& args]
+  (swap! app-state assoc
+         :status-text (str "<pre>" (apply str args) "</pre>")))
+(defn status-html! [e]
+  (set! (.-innerHTML e) (@app-state :status-text)))
+
 ;; this state doesn't care about being overwritten on reload
 (def vertex-position     (g/attribute "a_VertexPosition" :vec2))
 (def vertex-shader       {(g/gl-position) (g/vec4 vertex-position 0 1)})
@@ -43,7 +50,7 @@
       (catch :default e
         (println e)
         (println "Error rgb-fn" rgb-fn)
-        (swap! app-state assoc :status-text (str "<pre>" (str e " rgb-fn " rgb-fn) "</pre>"))
+        (app-status! e " rgb-fn " rgb-fn)
         (g/vec4 1 0 0 1)))))
 
 ;; ======================================================================
@@ -66,17 +73,13 @@
 (defn loader
   "A namespace loader that looks in the dependencies bundle for required namespaces."
   [{:keys [name macros path]} callback]
-  (let [;;_ (println "loader" name macros path)
-        str-name (.-str name)
-        source (if macros
-                 (dependencies-clj str-name)
-                 (dependencies-cljs str-name))
-        of-type (if macros "clj" "cljs")
-        lang :clj]
+  (let [[source of-type] (if macros
+                           [(dependencies-clj  (.-str name)) "clj"]
+                           [(dependencies-cljs (.-str name)) "cljs"])]
     (if source
-      (js/console.log (str "Loading: " str-name " " of-type))
-      (js/console.log (str "Unable to load: " str-name " " of-type)))
-    (callback {:lang lang :source (str source)})))
+      (js/console.log (str "Loading: " name " " of-type))
+      (js/console.log (str "Unable to load: " name " " of-type)))
+    (callback {:lang :clj :source source})))
 
 #_(def state
   "A compiler state, which is shared across compilations."
@@ -88,7 +91,7 @@
 (defn uate
   "Evaluate a string of Clojurescript, with synthesis and music namespaces available."
   [expr-str]
-  (println "uate")
+  ;;(println "uate")
   (cljs/eval-str
     (:uate-state @app-state);;state
     (str namespace-declaration expr-str)
@@ -97,23 +100,20 @@
      :load loader}
     normalise))
 
-
 ;; ======================================================================
 ;; initialize & display a random code...
 (defn get-rgb-fn []
   (let [random-code (gee/get-random-code)
         random-code-str (str random-code)
         pretty-random-code (-> random-code fc/pprint with-out-str)
-        _ (swap! app-state assoc
-                 :status-text (str "<pre>" pretty-random-code "</pre>"))
-        x (uate random-code-str)
-        rgb-fn (if (:error x)
+        _ (app-status! pretty-random-code)
+        rgb-fn (uate random-code-str)
+        rgb-fn (if (:error rgb-fn)
                  (do
-                   (println "evaluate error:" (:error x))
-                   (swap! app-state assoc
-                          :status-text (str "<pre>" "Evaluation error: " (:error x) "</pre>"))
+                   (println "evaluate error:" (:error rgb-fn))
+                   (app-status! "Evaluation error: " (:error rgb-fn))
                    (fn [pos] (g/vec3 1.0 0.0 0.0)))
-                 (:value x))
+                 (:value rgb-fn))
         ]
     rgb-fn))
 
@@ -144,7 +144,7 @@
     (.compileShader gl vs)
     (if-not (.getShaderParameter gl vs wgl/COMPILE_STATUS)
       (do
-        (swap! app-state assoc :status-text (str "<pre>" (.getShaderInfoLog gl vs) "</pre>"))
+        (app-status! (.getShaderInfoLog gl vs))
         (print (.getShaderInfoLog gl vs))
         (println "src:" (-> prog :vertex-shader :glsl))
         (render gl err-fragment-shader))
@@ -153,7 +153,7 @@
         (.compileShader gl fs)
         (if-not (.getShaderParameter gl fs wgl/COMPILE_STATUS)
           (do
-            (swap! app-state assoc :status-text (str "<pre>" (.getShaderInfoLog gl fs) "</pre>"))
+            (app-status! (.getShaderInfoLog gl fs))
             (print (.getShaderInfoLog gl fs))
             (println "src:" (-> prog :fragment-shader :glsl))
             (render gl err-fragment-shader))
@@ -163,7 +163,7 @@
             (.linkProgram gl pgm)
             (if-not (.getProgramParameter gl pgm wgl/LINK_STATUS)
               (do
-                (swap! app-state assoc :status-text (str "<pre>" (.getProgramInfoLog gl pgm) "</pre>"))
+                (app-status! (.getProgramInfoLog gl pgm) "</pre>")
                 (print "ERROR PGM:" (.getProgramInfoLog gl pgm))
                 (render gl err-fragment-shader))
               (do
@@ -177,9 +177,6 @@
                 (.useProgram gl pgm)
                 (.drawArrays gl wgl/TRIANGLES 0 6)))))))));;)
 
-(defn update-status [e]
-  (set! (.-innerHTML e) (@app-state :status-text)))
-
 (defn draw-new-image []
   (init)
   (let [canvas (dom/getElement "gl-canvas")
@@ -191,16 +188,16 @@
     (render gl {(g/gl-frag-color) (my-frag-color (@app-state :rgb-fn)
                                                  (@app-state :width)
                                                  (@app-state :height))})
-    (update-status status)))
+    (status-html! status)))
 
 (defn clicked []
   (draw-new-image))
 
 (defn after-load []
-  (println "after-load")
+  ;;(println "after-load")
   (if (@app-state :init)
     (draw-new-image)
-    (let [_ (println "not init")
+    (let [;;_ (println "not init")
           button (dom/getElement "update-btn")
           _      (.addEventListener button "click" clicked)
           _      (swap! app-state assoc
