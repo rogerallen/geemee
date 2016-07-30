@@ -22,7 +22,7 @@
 
 ;; ======================================================================
 ;; define your app data so that it doesn't get over-written on reload
-(defonce app-state (atom {:status-text "Hello world!"
+(defonce app-state (atom {:status-text "Click Update!"
                           :init   false
                           :width  720
                           :height 720
@@ -86,7 +86,7 @@
   (cljs/empty-state))
 
 (defn normalise [result]
-  (update result :error #(some-> % .-cause .-message)))
+  (update result :error #(some-> % .-cause .-stack))) ;; .-message
 
 (defn uate
   "Evaluate a string of Clojurescript, with synthesis and music namespaces available."
@@ -116,12 +116,6 @@
                  (:value rgb-fn))
         ]
     rgb-fn))
-
-(defn init []
-  (swap! app-state assoc
-         :width 360 :height 360
-         ;;:width 720 :height 720
-         :rgb-fn (get-rgb-fn)))
 
 (defn render [gl fragment-shader]
   (let [prog (p/program {:vertex-shader vertex-shader
@@ -177,8 +171,7 @@
                 (.useProgram gl pgm)
                 (.drawArrays gl wgl/TRIANGLES 0 6)))))))));;)
 
-(defn draw-new-image []
-  (init)
+(defn draw-image []
   (let [canvas (dom/getElement "gl-canvas")
         _      (goog.dom.setProperties canvas
                                        (clj->js {:width (@app-state :width)
@@ -189,6 +182,16 @@
                                                  (@app-state :width)
                                                  (@app-state :height))})
     (status-html! status)))
+
+(defn draw-first-image []
+  (swap! app-state assoc
+         :width 360 :height 360)
+  (draw-image))
+
+(defn draw-new-image []
+  (swap! app-state assoc
+         :rgb-fn (get-rgb-fn))
+  (draw-image))
 
 (defn clicked []
   (draw-new-image))
@@ -205,7 +208,7 @@
                         :init true)
           ;; no change _ (uate "(+ 1 1)")
           ]
-      (draw-new-image))))
+      (draw-first-image))))
 
 (set! (.-onload js/window)
       (after-load))
