@@ -24,8 +24,8 @@
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:status-text "Click Update!"
                           :init   false
-                          :width  720
-                          :height 720
+                          :width  300
+                          :height 300
                           :rgb-fn start-rgb-fn
                           :uate-state nil}))
 
@@ -69,6 +69,10 @@
 (def dependencies-clj
   "The bundle of clj (macros) dependencies."
   (macro/sources-clj gamma.api))
+
+;; WTF? see https://github.com/rogerallen/geemee/issues/2
+;; suppress useless Google Closure error about duplicate provides
+(set! (.-isProvided_ js/goog) (fn [name] false))
 
 (defn loader
   "A namespace loader that looks in the dependencies bundle for required namespaces."
@@ -185,7 +189,7 @@
 
 (defn draw-first-image []
   (swap! app-state assoc
-         :width 360 :height 360)
+         :width 300 :height 300)
   (draw-image))
 
 (defn draw-new-image []
@@ -208,7 +212,7 @@
                         :init true)
           ;; no change _ (uate "(+ 1 1)")
           ]
-      (draw-first-image))))
+      (draw-new-image))))
 
 (set! (.-onload js/window)
       (after-load))

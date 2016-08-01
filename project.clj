@@ -16,11 +16,14 @@
                  [org.clojure/java.classpath "0.2.3"]
                  ;; want my own so I get latest bugfixes
                  ;;[kovasb/gamma "0.0-135"]
-                 [rogerallen/gamma "0.0-135-15-gfd44" :except [fipp]]
+                 [rogerallen/gamma "0.0-135-15-gfd44"
+                  :exclusions [[org.clojure/clojure]
+                               [org.clojure/clojurescript]
+                               [fipp]]]
                  [fipp "0.6.5"]
                  ]
 
-  :plugins [[lein-figwheel "0.5.4-3"]
+  :plugins [[lein-figwheel "0.5.4-7"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]]
 
   :source-paths ["src"]
@@ -97,7 +100,7 @@
   ;; https://github.com/bhauman/lein-figwheel/wiki/Using-the-Figwheel-REPL-within-NRepl
 
 
-  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.4-3"]
+  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.4-7"]
                                   [com.cemerick/piggieback "0.2.1"]]
                    ;; need to add dev source path here to get user.clj loaded
                    :source-paths ["src" "dev"]
