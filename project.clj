@@ -52,11 +52,13 @@
                ;; This next build is an compressed minified build for
                ;; production. You can build this with:
                ;; lein cljsbuild once min
+               ;; Only :none and :simple are supported for bootstrapped ClojureScript.
+               ;; see https://github.com/clojure/clojurescript/wiki/Compiler-Options
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/geemee.js"
                            :main geemee.core
-                           :optimizations :advanced
+                           :optimizations :simple ;; can't use :advanced
                            :pretty-print false}}]}
 
   :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
