@@ -50,8 +50,8 @@
     (try
       (g/vec4 (rgb-fn pos) 1) ;; must have alpha=1 or you won't see it
       (catch :default e
-        (println e)
-        (println "Error rgb-fn" rgb-fn)
+        ;;(println e)
+        ;;(println "Error rgb-fn" rgb-fn)
         (app-status! e "\n" (:cur-pretty-code @app-state))
         (g/vec4 1 0 0 1)))))
 
@@ -60,7 +60,7 @@
 (defn validate-uate! [rgb-fn pretty-full-code]
   (if (:error rgb-fn)
     (do
-      (println "evaluate error:" (:error rgb-fn))
+      ;;(println "evaluate error:" (:error rgb-fn))
       (app-status! "Evaluation error: " (:error rgb-fn) "\n"
                    pretty-full-code)
       (fn [pos] (g/vec3 1.0 0.0 0.0)))
@@ -111,18 +111,21 @@
     (.compileShader gl vs)
     (if-not (.getShaderParameter gl vs wgl/COMPILE_STATUS)
       (do
-        (app-status! (.getShaderInfoLog gl vs))
-        (print (.getShaderInfoLog gl vs))
-        (println "src:" (-> prog :vertex-shader :glsl))
+        (app-status! "Vertex Shader Error:\n"
+                     (.getShaderInfoLog gl vs))
+        ;;(print (.getShaderInfoLog gl vs))
+        ;;(println "src:" (-> prog :vertex-shader :glsl))
         (render gl err-fragment-shader))
       (do
         (.shaderSource gl fs (-> prog :fragment-shader :glsl))
         (.compileShader gl fs)
         (if-not (.getShaderParameter gl fs wgl/COMPILE_STATUS)
           (do
-            (app-status! "Compile Error:\n" (.getShaderInfoLog gl fs) "\n" (:cur-pretty-code @app-state))
-            (print (.getShaderInfoLog gl fs))
-            (println "src:" (-> prog :fragment-shader :glsl))
+            (app-status! "Compile Error:\n"
+                         (.getShaderInfoLog gl fs) "\n"
+                         (:cur-pretty-code @app-state))
+            ;;(print (.getShaderInfoLog gl fs))
+            ;;(println "src:" (-> prog :fragment-shader :glsl))
             (render gl err-fragment-shader))
           (do
             (.attachShader gl pgm vs)
@@ -130,8 +133,10 @@
             (.linkProgram gl pgm)
             (if-not (.getProgramParameter gl pgm wgl/LINK_STATUS)
               (do
-                (app-status! "Link Error:\n" (.getProgramInfoLog gl pgm) "\n" (:cur-pretty-code @app-state))
-                (print "ERROR PGM:" (.getProgramInfoLog gl pgm))
+                (app-status! "Link Error:\n"
+                             (.getProgramInfoLog gl pgm) "\n"
+                             (:cur-pretty-code @app-state))
+                ;;(print "ERROR PGM:" (.getProgramInfoLog gl pgm))
                 (render gl err-fragment-shader))
               (do
                 (.bindBuffer gl wgl/ARRAY_BUFFER buf)
