@@ -146,7 +146,10 @@
          :rgb-fn (get-rgb-fn))
   (draw-image))
 
-(defn clicked []
+(defn update-click []
+  (draw-new-image))
+
+(defn mutate-click []
   (draw-new-image))
 
 (defn after-load []
@@ -154,8 +157,10 @@
   (if (@app-state :init)
     (draw-new-image)
     (let [;;_ (println "not init")
-          button (dom/getElement "update-btn")
-          _      (.addEventListener button "click" clicked)
+          button (dom/getElement "generate-btn")
+          _      (.addEventListener button "click" update-click)
+          button (dom/getElement "mutate-btn")
+          _      (.addEventListener button "click" mutate-click)
           _      (swap! app-state assoc
                         :uate-state (cljs/empty-state)
                         :init true)]

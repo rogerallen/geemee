@@ -5,7 +5,7 @@ pre {
   white-space: -pre-wrap;      /* Opera 4-6 */
   white-space: -o-pre-wrap;    /* Opera 7 */
   word-wrap:   break-word;     /* Internet Explorer 5.5+ */
-  max-width:   42em;
+  max-width:   43em;
   padding:     1em 1em;
   background:  #eeeeee;
   line-height: 1.33;

@@ -6,14 +6,17 @@
     <link href="css/style.css" rel="stylesheet" type="text/css">
   </head>
   <body>
-    <canvas id="gl-canvas" style="border: 1px solid black;"
-            width="500" height="500"></canvas>
+    <canvas id="gl-canvas" style="background-color: #eeeeee;"
+            width="300" height="300"></canvas>
     <div>
       <form>
-        <input type="button" id="update-btn" value="Update"/>
+        <input type="button" id="generate-btn" value="Generate"/>
+        <input type="button" id="mutate-btn" value="Mutate"/>
       </form>
     </div>
-    <p id="status"><p>
+    <div id="status">
+      <pre></pre>
+    </div>
     <script src="js/compiled/geemee.js" type="text/javascript"></script>
   </body>
 </html>
