@@ -244,4 +244,4 @@
 (defn- get-random-code
   "return a function that creates random gamma shader RGB code"
   []
-  (list 'defn 'pixel '[pos] (random-code1 3 MAX-RANDOM-CODE-DEPTH)))
+  (random-code1 3 MAX-RANDOM-CODE-DEPTH))

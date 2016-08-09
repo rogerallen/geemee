@@ -1,7 +1,7 @@
 (ns geemee.eval
   (:require [cljs.js :as cljs])
   (:require-macros [geemee.macros :as macro]))
-;; ======================================================================
+
 ;; another wholesale ripoff of klangmeister
 ;; https://github.com/ctford/klangmeister/blob/master/src/klangmeister/compile/eval.cljs
 
@@ -33,19 +33,24 @@
       (js/console.log (str "Unable to load: " name " " of-type)))
     (callback {:lang :clj :source source})))
 
-#_(def state
-  "A compiler state, which is shared across compilations."
-  (cljs/empty-state))
-
 (defn normalise [result]
   (update result :error #(some-> % .-cause .-stack))) ;; .-message
 
-;;(declare geemee.core/app-state)
-
+;; FIXME? this isn't working yet.
 (defn uate
-  "Evaluate a string of Clojurescript, with synthesis and music namespaces available."
+  "Evaluate a Clojurescript form."
+  [state expr]
+  (cljs/eval
+    state
+    (list '(ns geemee.live (:require [gamma.api :as g]))
+          expr)
+    {:eval cljs/js-eval
+     :load loader}
+    normalise))
+
+(defn uate-str
+  "Evaluate a string of Clojurescript."
   [state expr-str]
-  ;;(println "uate")
   (cljs/eval-str
     state
     (str namespace-declaration expr-str)

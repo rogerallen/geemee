@@ -23,11 +23,13 @@
 ;; ======================================================================
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:status-text "Click Update!"
-                          :init   false
-                          :width  300
-                          :height 300
-                          :rgb-fn start-rgb-fn
-                          :uate-state nil}))
+                          :init        false
+                          :width       300
+                          :height      300
+                          :cur-code    nil
+                          :cur-pretty-code nil
+                          :rgb-fn      nil
+                          :uate-state  nil}))
 
 ;; ======================================================================
 (defn app-status! [& args]
@@ -50,25 +52,43 @@
       (catch :default e
         (println e)
         (println "Error rgb-fn" rgb-fn)
-        (app-status! e " rgb-fn " rgb-fn)
+        (app-status! e "\n" (:cur-pretty-code @app-state))
         (g/vec4 1 0 0 1)))))
 
 ;; ======================================================================
-;; initialize & display a random code...
-(defn get-rgb-fn []
-  (let [random-code (gee/get-random-code)
-        random-code-str (str random-code)
-        pretty-random-code (-> random-code fc/pprint with-out-str)
-        _ (app-status! pretty-random-code)
-        rgb-fn (eval/uate (:uate-state @app-state) random-code-str)
-        rgb-fn (if (:error rgb-fn)
-                 (do
-                   (println "evaluate error:" (:error rgb-fn))
-                   (app-status! "Evaluation error: " (:error rgb-fn))
-                   (fn [pos] (g/vec3 1.0 0.0 0.0)))
-                 (:value rgb-fn))
-        ]
+;; check uate output
+(defn validate-uate! [rgb-fn pretty-full-code]
+  (if (:error rgb-fn)
+    (do
+      (println "evaluate error:" (:error rgb-fn))
+      (app-status! "Evaluation error: " (:error rgb-fn) "\n"
+                   pretty-full-code)
+      (fn [pos] (g/vec3 1.0 0.0 0.0)))
+    (:value rgb-fn)))
+
+(defn code2rgb-fn! [random-code]
+  (let [full-code        (list 'defn 'pixel '[pos] random-code)
+        full-code-str    (str full-code)
+        pretty-full-code (-> full-code fc/pprint with-out-str)
+        _                (app-status! pretty-full-code)
+        _                (swap! app-state assoc
+                                :cur-pretty-code pretty-full-code)
+        rgb-fn           (eval/uate-str (:uate-state @app-state) full-code-str)
+        rgb-fn           (validate-uate! rgb-fn pretty-full-code)]
     rgb-fn))
+
+;; initialize & display a random code...
+(defn set-rgb-fn! []
+  (let [random-code (gee/get-random-code)]
+    (swap! app-state assoc
+           :cur-code random-code
+           :rgb-fn (code2rgb-fn! random-code))))
+
+(defn mutate-rgb-fn! []
+  (let [random-code (gee/mutate (:cur-code @app-state))]
+    (swap! app-state assoc
+           :cur-code random-code
+           :rgb-fn (code2rgb-fn! random-code))))
 
 (defn render [gl fragment-shader]
   (let [prog (p/program {:vertex-shader vertex-shader
@@ -100,7 +120,7 @@
         (.compileShader gl fs)
         (if-not (.getShaderParameter gl fs wgl/COMPILE_STATUS)
           (do
-            (app-status! (.getShaderInfoLog gl fs))
+            (app-status! "Compile Error:\n" (.getShaderInfoLog gl fs) "\n" (:cur-pretty-code @app-state))
             (print (.getShaderInfoLog gl fs))
             (println "src:" (-> prog :fragment-shader :glsl))
             (render gl err-fragment-shader))
@@ -110,7 +130,7 @@
             (.linkProgram gl pgm)
             (if-not (.getProgramParameter gl pgm wgl/LINK_STATUS)
               (do
-                (app-status! (.getProgramInfoLog gl pgm) "</pre>")
+                (app-status! "Link Error:\n" (.getProgramInfoLog gl pgm) "\n" (:cur-pretty-code @app-state))
                 (print "ERROR PGM:" (.getProgramInfoLog gl pgm))
                 (render gl err-fragment-shader))
               (do
@@ -136,35 +156,30 @@
                                                  (@app-state :height))})
     (status-html! status)))
 
-(defn draw-first-image []
-  (swap! app-state assoc
-         :width 300 :height 300)
+(defn draw-new-image! []
+  (set-rgb-fn!)
   (draw-image))
 
-(defn draw-new-image []
-  (swap! app-state assoc
-         :rgb-fn (get-rgb-fn))
+(defn update-click! []
+  (draw-new-image!))
+
+(defn mutate-click! []
+  (mutate-rgb-fn!)
   (draw-image))
-
-(defn update-click []
-  (draw-new-image))
-
-(defn mutate-click []
-  (draw-new-image))
 
 (defn after-load []
   ;;(println "after-load")
   (if (@app-state :init)
-    (draw-new-image)
+    (draw-new-image!)
     (let [;;_ (println "not init")
           button (dom/getElement "generate-btn")
-          _      (.addEventListener button "click" update-click)
+          _      (.addEventListener button "click" update-click!)
           button (dom/getElement "mutate-btn")
-          _      (.addEventListener button "click" mutate-click)
+          _      (.addEventListener button "click" mutate-click!)
           _      (swap! app-state assoc
                         :uate-state (cljs/empty-state)
                         :init true)]
-      (draw-new-image))))
+      (draw-new-image!))))
 
 (set! (.-onload js/window)
       (after-load))
