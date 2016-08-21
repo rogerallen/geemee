@@ -79,7 +79,7 @@
 
 ;; initialize & display a random code...
 (defn set-rgb-fn! []
-  (let [random-code (gee/get-random-code)]
+  (let [random-code (gee/generate)]
     (swap! app-state assoc
            :cur-code random-code
            :rgb-fn (code2rgb-fn! random-code))))

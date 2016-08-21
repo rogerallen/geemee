@@ -16,7 +16,8 @@
                  [org.clojure/java.classpath "0.2.3"]
                  ;; want my own so I get latest bugfixes
                  ;;[kovasb/gamma "0.0-135"]
-                 [rogerallen/gamma "0.0-135-15-gfd44"
+                 [rogerallen/gamma "0.0-135-20-gae68"
+                  ;;rogerallen/gamma "0.0-135-15-gfd44"
                   :exclusions [[org.clojure/clojure]
                                [org.clojure/clojurescript]
                                [fipp]]]

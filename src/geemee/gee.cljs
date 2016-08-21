@@ -6,8 +6,7 @@
 
 ;; ======================================================================
 ;; defonce?
-(def MAX-RANDOM-CODE-DEPTH  6);; 10)     ;; emperically got to this...
-(def MAX-GOOD-CODE-ATTEMPTS 200)   ;; don't want to give up too quickly
+(def MAX-RANDOM-CODE-DEPTH  3);; 10)     ;; emperically got to this...
 (def PROB-TERM-FN           0.5);;0.1)   ;; probability of term-fn vs term-vals
 (def PROB-TERNARY-FN        0.2);;0.02)  ;; vs. binary or unary
 (def PROB-BINARY-FN         0.5);;0.3)   ;; vs ternary or unary
@@ -16,17 +15,17 @@
 ;; ======================================================================
 ;; Functions used in creating imagery.
 (declare random-value)
-(defn- random-scalar [] (random-value))
-(defn- random-vec2 [] (list 'g/vec2 (random-value) (random-value)))
-(defn- random-vec3 [] (list 'g/vec3 (random-value) (random-value) (random-value)))
-(defn- random-vec4 [] (list 'g/vec4 (random-value) (random-value) (random-value) (random-value)))
+(defn random-scalar [] (random-value))
+(defn random-vec2 []   (list 'g/vec2 (random-value) (random-value)))
+(defn random-vec3 []   (list 'g/vec3 (random-value) (random-value) (random-value)))
+(defn random-vec4 []   (list 'g/vec4 (random-value) (random-value) (random-value) (random-value)))
 
 (defn pos3a [] (list 'g/vec3 'pos (random-value)))
 (defn pos3b [] (list 'g/vec3 (random-value) 'pos ))
 (defn pos1a [] (list 'g/swizzle 'pos ':x))
 (defn pos1b [] (list 'g/swizzle 'pos ':y))
 
-(def term-vals #{'pos random-scalar random-vec2 random-vec3 random-vec4})
+(def term-vals #{'pos})
 
 (def term3-fns #{pos3a pos3b}) ;; FIXME eventually noise, etc
 (def term2-fns #{'pos})
@@ -39,9 +38,9 @@
                  ;;'g/length
                  })
 (def binary-fns #{'g/+ 'g/* 'g/- 'g/div
-                  ;; these don't work
                   'g/atan 'g/pow 'g/mod 'g/step
-                  ;; 'g/max 'g/min (wrong args vec3?)
+                  ;; these don't work
+                  ;;'g/max 'g/min (wrong args vec3?)
                   ;;'g/distance 'g/dot 'g/cross 'g/reflect
                   })
 (def ternary-fns #{'g/smoothstep 'g/mix
@@ -50,7 +49,7 @@
 (def fns (set/union unary-fns binary-fns ternary-fns))
 
 ;; ======================================================================
-(defn- random-fn
+(defn random-fn
   "return a random function.  Parameter n selects either 1 or 2
   parameters."
   [num-function-parameters]
@@ -59,7 +58,7 @@
     2 (rand-nth (seq binary-fns))
     1 (rand-nth (seq unary-fns))))
 
-(defn- random-term-fn
+(defn random-term-fn
   "return a random terminal function with a specific width"
   [out-width]
   (case out-width
@@ -67,7 +66,7 @@
     2 'pos ;;((rand-nth (seq term2-fns)))
     1 ((rand-nth (seq term1-fns)))))
 
-(defn- random-value
+(defn random-value
   "return a random value in the range (-3,3) with only 4 significant
   digits to increase readability"
   []
@@ -75,7 +74,7 @@
         x (/ (Math/floor (* x 10000)) 10000.0)]
     x))
 
-(defn- random-terminal
+(defn random-terminal
   "return a random terminal value: vectors, position, or noise."
   [out-width]
   (if (< (rand) PROB-TERM-FN)
@@ -89,7 +88,7 @@
 ;;(random-terminal)
 
 (declare random-code1)
-(defn- random-code
+(defn random-code
   "Recursively create & return a random s-expression made up of
   functions or terminals. When depth=0, create a terminal to control
   the size.  Create terminal fn with increasing probability as depth
@@ -104,7 +103,7 @@
          (cons (random-fn 1) (repeatedly 1 #(random-code1 out-width (dec depth))))))
      (random-terminal out-width))))
 
-(defn- random-code1
+(defn random-code1
   "make various independent formulas, depending on out-width"
   [out-width depth]
   (let [r (rand)]
@@ -126,7 +125,10 @@
       1 (random-code 1 depth)
       :else nil))) ;; FIXME ERROR
 
-(defn- locs
+;; ======================================================================
+;; mutation helpers
+
+(defn locs
   "return all zip locations within the s-expression.  each location
   contains the full context within the tree for use in replacement
   later."
@@ -135,42 +137,20 @@
         all-locs (take-while (complement zip/end?) (iterate zip/next zipper))]
     all-locs))
 
-(defn- locs-ex-fns
+(defn locs-ex-fns
   "return all zip locations within the s-expression--but not
   functions, only s-expr and the operands.  each location contains the
   full context within the tree for use in replacement later."
   [G]
   (filter #(not (fns (zip/node %))) (locs G)))
 
-(defn- replace-loc
-  "replace the location loc1 with the location loc2, returning the
-  root (full s-expression) of loc1."
-  [loc1 loc2]
-  (zip/root (zip/replace loc1 (zip/node loc2))))
-
-(defn- replace-loc-with-node
-  "replace the location loc1 with the location loc2, returning the
-  root (full s-expression) of loc1."
-  [loc1 node2]
-  (zip/root (zip/replace loc1 node2)))
-
-(defn- breed
-  "find a random expression in L to replace with a random expression
-  in R.  replace it within L and return a new L s-expression."
-  [L R]
-  (let [loc1 (rand-nth (locs-ex-fns L))
-        loc2 (rand-nth (locs-ex-fns R))]
-    ;;(println "\nLOC1" loc1)
-    ;;(println "\nLOC2" loc2)
-    (replace-loc loc1 loc2)))
-
-(defn- mutate-symbol
+(defn mutate-symbol
   "helper function for mutate-node.  Mutates symbols according to Karl
   Sims' SIGGRAPH paper."
   [node]
   (if (term-vals node)
     ;; must be pos--offset it
-    (cons `v+ (cons (random-vec2) 'pos))
+    (list 'g/+ (random-vec2) 'pos)
     (if (term3-fns node) ;; FIXME term1, term2, etc.
       (rand-nth (seq term3-fns))
       (if (unary-fns node)
@@ -181,7 +161,7 @@
             (rand-nth (seq ternary-fns))
             (println "UNEXPECTED NODE:" node)))))))
 
-(defn- mutate-node
+(defn mutate-node
   "Mutates code nodes according to Karl Sims' SIGGRAPH paper.  Returns
   nil sometimes to allow for copying other nodes in calling fn"
   [node]
@@ -226,7 +206,34 @@
 ;;function. Other arguments are generated at random if
 ;;necessary. For example X might become (* X .3).
 
-(defn- mutate
+;; ======================================================================
+;; breeding helpers
+
+(defn replace-loc
+  "replace the location loc1 with the location loc2, returning the
+  root (full s-expression) of loc1."
+  [loc1 loc2]
+  (zip/root (zip/replace loc1 (zip/node loc2))))
+
+(defn replace-loc-with-node
+  "replace the location loc1 with the location loc2, returning the
+  root (full s-expression) of loc1."
+  [loc1 node2]
+  (zip/root (zip/replace loc1 node2)))
+
+;; ======================================================================
+;; Public API: generate, mutate or breed color functions.
+;; ======================================================================
+
+(defn generate
+  "return a function that creates random gamma shader RGB code"
+  []
+  ;; TESTING snoise.  Not quite there yet, but it does something--very slowly.
+  ;;(list 'g/vec3 '(a/snoise (g/vec3 (g/* (g/vec2 30 30) pos) 0.0))))
+  ;; normal random-code generation
+  (random-code1 3 MAX-RANDOM-CODE-DEPTH))
+
+(defn mutate
   "mutate the code string L according to Karl Sims' SIGGRAPH paper."
   [L]
   (let [loc1      (rand-nth (locs L))
@@ -241,7 +248,12 @@
       ;; or, replace with new mutant
       (replace-loc-with-node loc1 new-node))))
 
-(defn- get-random-code
-  "return a function that creates random gamma shader RGB code"
-  []
-  (random-code1 3 MAX-RANDOM-CODE-DEPTH))
+(defn breed
+  "find a random expression in L to replace with a random expression
+  in R.  replace it within L and return a new L s-expression."
+  [L R]
+  (let [loc1 (rand-nth (locs-ex-fns L))
+        loc2 (rand-nth (locs-ex-fns R))]
+    ;;(println "\nLOC1" loc1)
+    ;;(println "\nLOC2" loc2)
+    (replace-loc loc1 loc2)))

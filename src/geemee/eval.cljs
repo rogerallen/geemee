@@ -30,11 +30,12 @@
 (def namespace-declaration
   (macro/literally
     (ns geemee.live
-      (:require [gamma.api :as g]))))
+      (:require [gamma.api :as g]
+                [geemee.api :as a]))))
 
 (def dependencies-cljs
   "The bundle of cljs dependencies."
-  (macro/sources-cljs gamma.api gamma.ast))
+  (macro/sources-cljs gamma.api gamma.ast geemee.api))
 
 (def dependencies-clj
   "The bundle of clj (macros) dependencies."
